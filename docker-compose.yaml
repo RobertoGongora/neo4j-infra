@@ -4,7 +4,6 @@ services:
     restart: unless-stopped
     expose:
       - "7474"
-      - "7687"
     ports:
       - "7687:7687"
     volumes:
@@ -23,6 +22,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    labels:
+      - "traefik.http.services.neo4j-dkk4g0kg4ws4ws8044okskkk.loadbalancer.server.port=7474"
 
 volumes:
   neo4j_data:
