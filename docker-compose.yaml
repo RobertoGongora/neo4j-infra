@@ -1,6 +1,6 @@
 services:
   neo4j:
-    image: neo4j:5-community
+    image: neo4j:5
     restart: unless-stopped
     expose:
       - "7474"
@@ -10,27 +10,47 @@ services:
       - neo4j_logs:/logs
     environment:
       - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/changeme}
-      - NEO4J_PLUGINS=["apoc"]
-      - NEO4J_dbms_security_procedures_unrestricted=apoc.*
-      - NEO4J_server_memory_heap_initial__size=256m
-      - NEO4J_server_memory_heap_max__size=512m
-      - NEO4J_server_memory_pagecache_size=256m
-    mem_limit: 1g
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:7474 || exit 1"]
-      interval: 30s
+      interval: 15s
       timeout: 10s
-      retries: 3
+      retries: 5
     labels:
-      # HTTP/HTTPS - Neo4j Browser UI (port 7474)
-      - "traefik.http.services.neo4j-dkk4g0kg4ws4ws8044okskkk.loadbalancer.server.port=7474"
-      # TCP - Bolt protocol with TLS termination (port 7687)
-      - "traefik.tcp.routers.neo4j-bolt.rule=HostSNI(`neo4j.eixamplefi.com`)"
-      - "traefik.tcp.routers.neo4j-bolt.entrypoints=neo4j-bolt"
-      - "traefik.tcp.routers.neo4j-bolt.tls=true"
-      - "traefik.tcp.routers.neo4j-bolt.tls.certresolver=letsencrypt"
-      - "traefik.tcp.services.neo4j-bolt.loadbalancer.server.port=7687"
+      - traefik.enable=true
+      # Browser UI routing (port 7474)
+      - traefik.http.routers.neo4j-http.entryPoints=http
+      - traefik.http.routers.neo4j-http.rule=Host(`neo4j.eixamplefi.com`)
+      - traefik.http.routers.neo4j-http.middlewares=redirect-to-https
+      - traefik.http.routers.neo4j-https.entryPoints=https
+      - traefik.http.routers.neo4j-https.rule=Host(`neo4j.eixamplefi.com`)
+      - traefik.http.routers.neo4j-https.tls=true
+      - traefik.http.routers.neo4j-https.tls.certresolver=letsencrypt
+      - traefik.http.services.neo4j.loadbalancer.server.port=7474
 
 volumes:
   neo4j_data:
   neo4j_logs:
+
+# NOTE: Bolt routing (port 7687) is handled via Traefik file-based dynamic config,
+# NOT via Docker labels. This avoids Traefik's "multiple services" conflict.
+#
+# Traefik entrypoint (in proxy docker-compose.yml):
+#   --entrypoints.bolt.address=:7687
+#
+# Traefik dynamic config file (/data/coolify/proxy/dynamic/neo4j-bolt.yaml):
+#   http:
+#     routers:
+#       neo4j-bolt:
+#         rule: "Host(`neo4j.eixamplefi.com`)"
+#         entryPoints: [bolt]
+#         service: neo4j-bolt
+#         tls:
+#           certResolver: letsencrypt
+#     services:
+#       neo4j-bolt:
+#         loadBalancer:
+#           servers:
+#             - url: "http://<container-name>:7687"
+#
+# Bolt uses WebSockets, so it routes via HTTP router (not TCP).
+# Reference: github.com/Syndesi/neo4j-traefik-example

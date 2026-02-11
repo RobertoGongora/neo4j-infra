@@ -1,0 +1,21 @@
+# Traefik dynamic config for Neo4j Bolt protocol
+# Place in /data/coolify/proxy/dynamic/neo4j-bolt.yaml
+#
+# Bolt uses WebSockets, so it must route via HTTP router (not TCP).
+# Requires a custom Traefik entrypoint: --entrypoints.bolt.address=:7687
+# Reference: github.com/Syndesi/neo4j-traefik-example
+
+http:
+  routers:
+    neo4j-bolt:
+      rule: "Host(`neo4j.eixamplefi.com`)"
+      entryPoints:
+        - bolt
+      service: neo4j-bolt
+      tls:
+        certResolver: letsencrypt
+  services:
+    neo4j-bolt:
+      loadBalancer:
+        servers:
+          - url: "http://neo4j-ls4w80wow04co88coo0ogos4:7687"
