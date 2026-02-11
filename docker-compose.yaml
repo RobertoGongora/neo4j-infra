@@ -4,8 +4,7 @@ services:
     restart: unless-stopped
     expose:
       - "7474"
-    ports:
-      - "7687:7687"
+      - "7687"
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
@@ -23,7 +22,14 @@ services:
       timeout: 10s
       retries: 3
     labels:
+      # HTTP/HTTPS - Neo4j Browser UI (port 7474)
       - "traefik.http.services.neo4j-dkk4g0kg4ws4ws8044okskkk.loadbalancer.server.port=7474"
+      # TCP - Bolt protocol with TLS termination (port 7687)
+      - "traefik.tcp.routers.neo4j-bolt.rule=HostSNI(`neo4j.eixamplefi.com`)"
+      - "traefik.tcp.routers.neo4j-bolt.entrypoints=neo4j-bolt"
+      - "traefik.tcp.routers.neo4j-bolt.tls=true"
+      - "traefik.tcp.routers.neo4j-bolt.tls.certresolver=letsencrypt"
+      - "traefik.tcp.services.neo4j-bolt.loadbalancer.server.port=7687"
 
 volumes:
   neo4j_data:
