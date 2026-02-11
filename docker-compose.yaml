@@ -2,8 +2,10 @@ services:
   neo4j:
     image: neo4j:5-community
     restart: unless-stopped
+    expose:
+      - "7474"
+      - "7687"
     ports:
-      - "7474:7474"
       - "7687:7687"
     volumes:
       - neo4j_data:/data
@@ -21,13 +23,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.neo4j-browser.rule=Host(`neo4j.eixamplefi.com`)"
-      - "traefik.http.routers.neo4j-browser.entrypoints=https"
-      - "traefik.http.routers.neo4j-browser.tls=true"
-      - "traefik.http.routers.neo4j-browser.tls.certresolver=letsencrypt"
-      - "traefik.http.services.neo4j-browser.loadbalancer.server.port=7474"
 
 volumes:
   neo4j_data:
